@@ -1,0 +1,55 @@
+on: [push]
+
+jobs:
+  test_action:
+    name: Test action
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: alpine-hello-world
+      BEAKER_WORKSPACE: ai2/petew-testing
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Determine current commit SHA (pull request)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+
+      - name: Determine current commit SHA (push)
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "COMMIT_SHA=$GITHUB_SHA" >> $GITHUB_ENV
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }} .
+
+      - name: Delete existing commit image
+        continue-on-error: true
+        uses: allenai/beaker-action@v0.2.0
+        with:
+          token: ${{ secrets.BEAKER_TOKEN }}
+          command: image
+          args: delete petew/${{ env.IMAGE_NAME }}-${{ env.COMMIT_SHA }}
+
+      - name: Upload new commit image
+        uses: allenai/beaker-action@v0.2.0
+        with:
+          token: ${{ secrets.BEAKER_TOKEN }}
+          command: image
+          args: create --workspace ${{ env.BEAKER_WORKSPACE }} --name ${{ env.IMAGE_NAME }}-{{ env.COMMIT_SHA }} ${{ env.IMAGE_NAME }}
+
+      - name: Delete existing image
+        continue-on-error: true
+        uses: allenai/beaker-action@v0.2.0
+        with:
+          token: ${{ secrets.BEAKER_TOKEN }}
+          command: image
+          args: delete petew/${{ env.IMAGE_NAME }}
+
+      - name: Rename new commit image to final image
+        uses: allenai/beaker-action@v0.2.0
+        with:
+          token: ${{ secrets.BEAKER_TOKEN }}
+          command: image
+          args: rename petew/${{ env.IMAGE_NAME }}-${{ env.COMMIT_SHA }} ${{ env.IMAGE_NAME }}
