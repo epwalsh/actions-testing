@@ -1,8 +1,10 @@
+name: Actions
+
 on: [push]
 
 jobs:
   test_action:
-    name: Test action
+    name: Test beaker action
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME: alpine-hello-world
@@ -37,7 +39,7 @@ jobs:
         with:
           token: ${{ secrets.BEAKER_TOKEN }}
           command: image
-          args: create --workspace ${{ env.BEAKER_WORKSPACE }} --name ${{ env.IMAGE_NAME }}-{{ env.COMMIT_SHA }} ${{ env.IMAGE_NAME }}
+          args: create --workspace ${{ env.BEAKER_WORKSPACE }} --name ${{ env.IMAGE_NAME }}-${{ env.COMMIT_SHA }} ${{ env.IMAGE_NAME }}
 
       - name: Delete existing image
         continue-on-error: true
